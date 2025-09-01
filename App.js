@@ -29,6 +29,15 @@ export default function App() {
       return;
     }
 
+    // Verificação para operações que precisam de pelo menos dois números
+    if (
+      ['soma', 'subtracao', 'multiplicacao', 'divisao'].includes(operacao) &&
+      nums.length < 2
+    ) {
+      setResultado('Adicione pelo menos dois números!');
+      return;
+    }
+
     let res = '';
     switch (operacao) {
       case 'soma':
