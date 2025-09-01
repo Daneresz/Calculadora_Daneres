@@ -1,24 +1,37 @@
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { StyleSheet, Text, View, Image, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView } from 'react-native';
 
 export default function App() {
-  const [numeros, setNumeros] = useState(['', '']);
+  const [numeros, setNumeros] = useState(['']);
+  const [indiceAtual, setIndiceAtual] = useState(0);
   const [resultado, setResultado] = useState('');
-
-  const handleNumeroChange = (text, idx) => {
-    const novos = [...numeros];
-    novos[idx] = text;
-    setNumeros(novos);
-  };
 
   const adicionarCampo = () => {
     setNumeros([...numeros, '']);
+    setIndiceAtual(numeros.length);
   };
 
   const removerCampo = (idx) => {
     if (numeros.length <= 1) return;
     const novos = numeros.filter((_, i) => i !== idx);
+    setNumeros(novos);
+    setIndiceAtual(Math.max(0, idx - 1));
+  };
+
+  const selecionarCampo = (idx) => {
+    setIndiceAtual(idx);
+  };
+
+  const pressionarTecla = (valor) => {
+    const novos = [...numeros];
+    novos[indiceAtual] = (novos[indiceAtual] || '') + valor;
+    setNumeros(novos);
+  };
+
+  const apagarTecla = () => {
+    const novos = [...numeros];
+    novos[indiceAtual] = (novos[indiceAtual] || '').slice(0, -1);
     setNumeros(novos);
   };
 
@@ -28,8 +41,6 @@ export default function App() {
       setResultado('Digite todos os números válidos!');
       return;
     }
-
-    // Verificação para operações que precisam de pelo menos dois números
     if (
       ['soma', 'subtracao', 'multiplicacao', 'divisao'].includes(operacao) &&
       nums.length < 2
@@ -72,30 +83,66 @@ export default function App() {
     setResultado(res.toString());
   };
 
+  const teclas = [
+    ['7', '8', '9'],
+    ['4', '5', '6'],
+    ['1', '2', '3'],
+    ['0', '.', '⌫'],
+  ];
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require('./assets/theater.png')} style={styles.logo} />
-      <Text style={styles.texto}>Calculadora Avançada</Text>
-      {numeros.map((num, idx) => (
-        <View key={idx} style={styles.inputRow}>
-          <TextInput
-            placeholder={`Número ${idx + 1}`}
-            keyboardType='numeric'
-            style={[styles.input, { flex: 1 }]}
-            value={num}
-            onChangeText={text => handleNumeroChange(text, idx)}
-            placeholderTextColor="#f5f3ce99"
-          />
-          {numeros.length > 1 && (
-            <TouchableOpacity style={styles.removeButton} onPress={() => removerCampo(idx)}>
-              <Text style={styles.removeButtonText}>-</Text>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.topArea}>
+        <Image source={require('./assets/theater.png')} style={styles.logo} />
+        <Text style={styles.titulo}>Calculadora Avançada</Text>
+      </View>
+      
+      <View style={styles.inputsArea}>
+        {numeros.map((num, idx) => (
+          <View key={idx} style={styles.inputRow}>
+            <TouchableOpacity
+              style={[
+                styles.inputFake,
+                indiceAtual === idx && styles.inputFakeAtivo
+              ]}
+              onPress={() => selecionarCampo(idx)}
+            >
+              <Text style={styles.inputFakeText}>
+                {num === '' ? `Número ${idx + 1}` : num}
+              </Text>
             </TouchableOpacity>
-          )}
+            {numeros.length > 1 && (
+              <TouchableOpacity style={styles.removeButton} onPress={() => removerCampo(idx)}>
+                <Text style={styles.removeButtonText}>-</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+        <TouchableOpacity style={styles.addButton} onPress={adicionarCampo}>
+          <Text style={styles.addButtonText}>Adicionar Número</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.tecladoArea}>
+        <View style={styles.tecladoContainer}>
+          {teclas.map((linha, i) => (
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              {linha.map((tecla) => (
+                <TouchableOpacity
+                  key={tecla}
+                  style={styles.tecla}
+                  onPress={() => {
+                    if (tecla === '⌫') apagarTecla();
+                    else pressionarTecla(tecla);
+                  }}
+                >
+                  <Text style={styles.teclaTexto}>{tecla}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))}
         </View>
-      ))}
-      <TouchableOpacity style={styles.addButton} onPress={adicionarCampo}>
-        <Text style={styles.addButtonText}>Adicionar Número</Text>
-      </TouchableOpacity>
+      </View>
 
       <View style={styles.botoesContainer}>
         <TouchableOpacity style={styles.botao2} onPress={() => calcular('soma')}>
@@ -118,7 +165,7 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.texto, { marginTop: 30 }]}>Resultado: {resultado}</Text>
+      <Text style={styles.resultado}>Resultado: {resultado}</Text>
       <StatusBar style="light" />
     </ScrollView>
   );
@@ -129,69 +176,75 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#FEC021',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 32,
+    paddingHorizontal: 10,
+    justifyContent: 'flex-start',
   },
-  texto: {
-    fontSize: 26,
+  topArea: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 6,
+    alignSelf: 'center',
+  },
+  titulo: {
+    fontSize: 28,
     color: '#E6612D',
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
     textShadowColor: '#fffacd',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 8,
     letterSpacing: 1,
   },
-  logo: {
-    width: 180,
-    height: 180,
+  inputsArea: {
+    width: '100%',
+    alignItems: 'center',
     marginBottom: 18,
+    marginTop: 6,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '75%',
+    width: '90%',
+    marginBottom: 2,
   },
-  input: {
+  inputFake: {
     backgroundColor: '#E6612D',
     borderRadius: 12,
     borderColor: '#f5f3ce',
     borderWidth: 2,
-    marginTop: 18,
+    marginTop: 12,
     padding: 12,
     fontSize: 18,
     color: '#f5f3ce',
     marginRight: 8,
+    flex: 1,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  botao2: {
-    backgroundColor: '#E6612D',
-    marginHorizontal: 8,
-    marginVertical: 6,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#f5f3ce',
-    borderRadius: 50,
-    shadowColor: '#3d1f00',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+  inputFakeAtivo: {
+    borderColor: '#fff3b0',
+    backgroundColor: '#ffb366',
   },
-  botaoTexto: {
-    color: '#FEC021',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textShadowColor: '#fffacd',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 6,
+  inputFakeText: {
+    color: '#f5f3ce',
+    fontSize: 18,
   },
   addButton: {
     backgroundColor: '#FEC021',
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 18,
-    marginTop: 10,
+    marginTop: 16,
     borderWidth: 2,
     borderColor: '#E6612D',
+    alignSelf: 'center',
   },
   addButtonText: {
     color: '#E6612D',
@@ -204,7 +257,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderWidth: 2,
     borderColor: '#fff3b0',
-    marginTop: 18,
+    marginTop: 12,
     marginLeft: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -217,10 +270,81 @@ const styles = StyleSheet.create({
     fontSize: 22,
     textAlign: 'center',
   },
+  tecladoArea: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 18,
+    marginTop: 6,
+  },
+  tecladoContainer: {
+    backgroundColor: '#fff3b0',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+    width: 260,
+    alignSelf: 'center',
+    marginBottom: 6,
+  },
+  tecla: {
+    backgroundColor: '#E6612D',
+    margin: 6,
+    borderRadius: 12,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#f5f3ce',
+  },
+  teclaTexto: {
+    color: '#fff3b0',
+    fontSize: 26,
+    fontWeight: 'bold',
+  },
   botoesContainer: {
     flexDirection: 'row',
-    marginTop: 20,
     flexWrap: 'wrap',
     justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 18,
+    width: '100%',
+    gap: 8,
+  },
+  botao2: {
+    backgroundColor: '#E6612D',
+    marginHorizontal: 6,
+    marginVertical: 6,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#f5f3ce',
+    borderRadius: 50,
+    shadowColor: '#3d1f00',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  botaoTexto: {
+    color: '#21feadff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textShadowColor: '#fffacd',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 6,
+  },
+  resultado: {
+    fontSize: 22,
+    color: '#E6612D',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+    backgroundColor: '#fff3b0',
+    borderRadius: 12,
+    padding: 12,
+    width: '90%',
+    alignSelf: 'center',
   },
 });
